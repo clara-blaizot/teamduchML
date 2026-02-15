@@ -1,42 +1,122 @@
-"""
-This script can be used as skelton code to read the challenge train and test
-geojsons, to train a trivial model, and write data to the submission file.
-"""
 import geopandas as gpd
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder
 import numpy as np
 
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
 
-from sklearn.neighbors import KNeighborsClassifier
+# =====================
+# 1. Mapping des classes
+# =====================
+change_type_map = {
+    'Demolition': 0,
+    'Road': 1,
+    'Residential': 2,
+    'Commercial': 3,
+    'Industrial': 4,
+    'Mega Projects': 5
+}
 
-from sklearn.metrics import accuracy_score
+# =====================
+# 2. Lecture des données
+# =====================
+train_df = gpd.read_file("train.geojson")
+test_df = gpd.read_file("test.geojson")
 
-change_type_map = {'Demolition': 0, 'Road': 1, 'Residential': 2, 'Commercial': 3, 'Industrial': 4,
-       'Mega Projects': 5}
+# =====================
+# 3. Reprojection
+# =====================
+# Permet d'avoir des aires et périmètres en mètres
+train_df = train_df.to_crs(epsg=3857)
+test_df = test_df.to_crs(epsg=3857)
 
-## Read csvs
+# =====================
+# 4. Feature engineering
+# =====================
+def extract_features(gdf):
+    features = pd.DataFrame(index=gdf.index)
 
-train_df = gpd.read_file('train.geojson', index_col=0)
-test_df = gpd.read_file('test.geojson', index_col=0)
+    # ---- Géométrie
+    # Peut produire NaN ou inf → géré plus tard par la médiane
+    features["area"] = gdf.geometry.area
+    features["perimeter"] = gdf.geometry.length
 
-## Filtering column "mail_type"
-train_x = np.asarray(train_df[['geometry']].area)
-train_x = train_x.reshape(-1, 1)
-train_y = train_df['change_type'].apply(lambda x: change_type_map[x])
+    # ---- RGB date 1
+    features["red_mean_d1"] = gdf["img_red_mean_date1"]
+    features["green_mean_d1"] = gdf["img_green_mean_date1"]
+    features["blue_mean_d1"] = gdf["img_blue_mean_date1"]
 
-test_x = np.asarray(test_df[['geometry']].area)
-test_x = test_x.reshape(-1, 1)
+    # ---- RGB date 5
+    features["red_mean_d5"] = gdf["img_red_mean_date5"]
+    features["green_mean_d5"] = gdf["img_green_mean_date5"]
+    features["blue_mean_d5"] = gdf["img_blue_mean_date5"]
 
-print (train_x.shape, train_y.shape, test_x.shape)
+    # ---- Différences RGB (évolution visuelle)
+    features["red_diff"] = features["red_mean_d5"] - features["red_mean_d1"]
+    features["green_diff"] = features["green_mean_d5"] - features["green_mean_d1"]
+    features["blue_diff"] = features["blue_mean_d5"] - features["blue_mean_d1"]
 
+    # ---- Temps (durée du projet en jours)
+    d1 = pd.to_datetime(gdf["date1"], dayfirst=True, errors="coerce")
+    d5 = pd.to_datetime(gdf["date4"], dayfirst=True, errors="coerce")
+    duration = (d5 - d1).dt.days
 
-## Train a simple OnveVsRestClassifier using featurized data
-neigh = KNeighborsClassifier(n_neighbors=3)
-neigh.fit(train_x, train_y)
-pred_y = neigh.predict(test_x)
-print (pred_y.shape)
+    # Durées négatives → NaN
+    duration = duration.where(duration >= 0)
+    features["duration_days"] = duration
 
-## Save results to submission file
-pred_df = pd.DataFrame(pred_y, columns=['change_type'])
-pred_df.to_csv("knn_sample_submission.csv", index=True, index_label='Id')
+    # ---- Étape CRUCIALE : inf → NaN
+    features = features.replace([np.inf, -np.inf], np.nan)
+
+    return features
+
+# =====================
+# 5. Construction X / y
+# =====================
+X_train = extract_features(train_df)
+X_test = extract_features(test_df)
+
+y_train = train_df["change_type"].map(change_type_map)
+
+print("Train X :", X_train.shape)
+print("Train y :", y_train.shape)
+print("Test X  :", X_test.shape)
+
+# =====================
+# 6. Pipeline ML
+# =====================
+pipeline = Pipeline([
+    # Remplacement de toutes les valeurs manquantes par la médiane
+    ("imputer", SimpleImputer(strategy="median")),
+
+    # Modèle final
+    ("gb", GradientBoostingClassifier(
+        n_estimators=200,
+        learning_rate=0.1,
+        max_depth=5,
+        random_state=42
+    ))
+])
+
+# =====================
+# 7. Entraînement
+# =====================
+pipeline.fit(X_train, y_train)
+
+# =====================
+# 8. Prédiction
+# =====================
+pred_y = pipeline.predict(X_test)
+print("Predictions :", pred_y.shape)
+
+# =====================
+# 9. Fichier de soumission Kaggle
+# =====================
+submission = pd.DataFrame({
+    "Id": X_test.index,
+    "change_type": pred_y
+})
+
+submission.to_csv("gradient_boosting_submission.csv", index=False)
+print("✅ Fichier gradient_boosting_submission.csv créé")
