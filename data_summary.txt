@@ -1,0 +1,79 @@
+======================================================================
+Total samples: 296146
+Shape: (296146, 44)
+Colonnes: ['urban_type', 'geography_type', 'change_type', 'img_red_mean_date1', 'img_green_mean_date1', 'img_blue_mean_date1', 'img_red_std_date1', 'img_green_std_date1', 'img_blue_std_date1', 'img_red_mean_date2', 'img_green_mean_date2', 'img_blue_mean_date2', 'img_red_std_date2', 'img_green_std_date2', 'img_blue_std_date2', 'img_red_mean_date3', 'img_green_mean_date3', 'img_blue_mean_date3', 'img_red_std_date3', 'img_green_std_date3', 'img_blue_std_date3', 'img_red_mean_date4', 'img_green_mean_date4', 'img_blue_mean_date4', 'img_red_std_date4', 'img_green_std_date4', 'img_blue_std_date4', 'img_red_mean_date5', 'img_green_mean_date5', 'img_blue_mean_date5', 'img_red_std_date5', 'img_green_std_date5', 'img_blue_std_date5', 'date0', 'change_status_date0', 'date1', 'change_status_date1', 'date2', 'change_status_date2', 'date3', 'change_status_date3', 'date4', 'change_status_date4', 'index']
+
+### DISTRIBUTION CIBLE ###
+Residential: 148435
+Commercial: 100422
+Demolition: 31509
+Road: 14305
+Industrial: 1324
+Mega Projects: 151
+
+urban_type               object
+geography_type           object
+change_type              object
+img_red_mean_date1      float64
+img_green_mean_date1    float64
+img_blue_mean_date1     float64
+img_red_std_date1       float64
+img_green_std_date1     float64
+img_blue_std_date1      float64
+img_red_mean_date2      float64
+img_green_mean_date2    float64
+img_blue_mean_date2     float64
+img_red_std_date2       float64
+img_green_std_date2     float64
+img_blue_std_date2      float64
+img_red_mean_date3      float64
+img_green_mean_date3    float64
+img_blue_mean_date3     float64
+img_red_std_date3       float64
+img_green_std_date3     float64
+img_blue_std_date3      float64
+img_red_mean_date4      float64
+img_green_mean_date4    float64
+img_blue_mean_date4     float64
+img_red_std_date4       float64
+img_green_std_date4     float64
+img_blue_std_date4      float64
+img_red_mean_date5      float64
+img_green_mean_date5    float64
+img_blue_mean_date5     float64
+img_red_std_date5       float64
+img_green_std_date5     float64
+img_blue_std_date5      float64
+date0                    object
+change_status_date0      object
+date1                    object
+change_status_date1      object
+date2                    object
+change_status_date2      object
+date3                    object
+change_status_date3      object
+date4                    object
+change_status_date4      object
+index                     int64
+dtype: object
+
+     urban_type                    geography_type  ...  change_status_date4  index
+0  Sparse Urban           Dense Forest,Grass Land  ...  Construction Midway      0
+1  Sparse Urban           Dense Forest,Grass Land  ...  Construction Midway      1
+2  Sparse Urban           Dense Forest,Grass Land  ...         Land Cleared      2
+3         Rural           Dense Forest,Grass Land  ...  Construction Midway      3
+4   Dense Urban  Sparse Forest,Dense Forest,Farms  ...   Prior Construction      4
+
+[5 rows x 44 columns]
+
+       img_red_mean_date1  ...          index
+count       294192.000000  ...  296146.000000
+mean           117.792886  ...  148072.500000
+std             39.625596  ...   85490.130747
+min              2.120951  ...       0.000000
+25%             90.792968  ...   74036.250000
+50%            115.253031  ...  148072.500000
+75%            142.277433  ...  222108.750000
+max            255.000000  ...  296145.000000
+
+[8 rows x 31 columns]

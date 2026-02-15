@@ -7,6 +7,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer  
 from sklearn.ensemble import RandomForestClassifier 
+from sklearn.model_selection import RandomizedSearchCV
 
 # Mapping des classes cibles (change_type) vers des entiers pour la classification
 change_type_map = {'Demolition': 0, 'Road': 1, 'Residential': 2, 'Commercial': 3, 'Industrial': 4, 'Mega Projects': 5}
@@ -65,18 +66,44 @@ print(f"Dimensions test: X={X_test.shape}")
 
 
 
-# Entraînement du modèle Random Forest
+# Entraînement du modèle Random Forest avec tuning des hyperparamètres
 rf_classifier = RandomForestClassifier(
-    n_estimators=30,  # Nombre d'arbres dans la forêt
-    random_state=42,  # Pour la reproductibilité
-    n_jobs=-1  # Utilise tous les cœurs CPU pour accélérer
+    n_estimators=30,  # Gardé à 30 pour éviter les temps longs
+    random_state=42,
+    n_jobs=-1
 )
-print("Début de l'entrainement...")
-rf_classifier.fit(X_train, y_train)  # Entraînement du modèle
-print("Entrainement terminé.")
+
+# Définition des paramètres à tuner (excluant n_estimators pour garder le temps raisonnable)
+param_dist = {
+    'max_depth': [10, 20, 30, None],  # Profondeur max des arbres
+    'min_samples_split': [2, 5, 10],  # Min échantillons pour splitter
+    'min_samples_leaf': [1, 2, 4],    # Min échantillons par feuille
+    'max_features': ['sqrt', 'log2', None],  # Fraction de features
+    'class_weight': ['balanced', None]  # Gestion du déséquilibre des classes
+}
+
+# Recherche aléatoire avec validation croisée
+random_search = RandomizedSearchCV(
+    rf_classifier, 
+    param_distributions=param_dist, 
+    n_iter=10,  # Nombre d'itérations (réduisez à 10 si trop lent)
+    cv=2,  # Validation croisée 3-fold (pour vitesse)
+    scoring='accuracy', 
+    random_state=42, 
+    n_jobs=-1
+)
+
+print("Début du tuning des hyperparamètres...")
+random_search.fit(X_train, y_train)
+print("Tuning terminé.")
+
+# Utilisation du meilleur modèle trouvé
+best_rf = random_search.best_estimator_
+print(f"Meilleurs paramètres : {random_search.best_params_}")
+print(f"Meilleure accuracy CV : {random_search.best_score_:.4f}")
 
 # Prédiction sur les données de test
-pred_y = rf_classifier.predict(X_test)  # Prédictions sous forme d'entiers (0-5)
+pred_y = best_rf.predict(X_test)  # Prédictions sous forme d'entiers (0-5)
 print(f"Shape des prédictions: {pred_y.shape}")
 
 # Sauvegarde des résultats dans le fichier de soumission
