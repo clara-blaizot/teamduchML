@@ -8,6 +8,7 @@ from sklearn.compose import ColumnTransformer
 import pandas as pd
 import xgboost as xgb
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import ExtraTreesClassifier
 
 
 # Mapping des classes cibles (change_type) vers des entiers pour la classification
@@ -22,10 +23,14 @@ train_df['area'] = train_df.geometry.area
 train_df['perimeter'] = train_df.geometry.length 
 train_df['compactness'] = 4 * np.pi * train_df['area'] / (train_df['perimeter'] ** 2) 
 
+
+
 # Même chose pour le test set
 test_df['area'] = test_df.geometry.area
 test_df['perimeter'] = test_df.geometry.length
 test_df['compactness'] = 4 * np.pi * test_df['area'] / (test_df['perimeter'] ** 2)
+
+
 
 
 # Sélection des features numériques : géométrie + statistiques d'images (moyennes et écarts-types RGB pour 5 dates)
@@ -62,25 +67,39 @@ print(f"Dimensions entraînement: X={X_train.shape}, y={y_train.shape}")
 print(f"Dimensions test: X={X_test.shape}")
 
 
-# Entraînement du modèle Random Forest
 rf_classifier = RandomForestClassifier(
-    n_estimators=500,
-    max_depth=25,
-    max_features='log2',
-    min_samples_leaf=2,
+    n_estimators=1200,          # ↑ important
+    max_depth=None,             # laisse les arbres s’exprimer
+    max_features=0.4,           # mieux que 'log2' ici
+    min_samples_leaf=1,         # clé pour la perf brute
+    min_samples_split=2,
     bootstrap=True,
-    oob_score=True,
+    oob_score=False,            # inutile si pas utilisé
     random_state=42,
     n_jobs=-1
 )
-print("Début de l'entrainement...")
-rf_classifier.fit(X_train, y_train)  # Entraînement du modèle
-print("Entrainement terminé.")
 
-# Prédiction sur les données de test
-pred_y = rf_classifier.predict(X_test)  # Prédictions sous forme d'entiers (0-5)
-print(f"Shape des prédictions: {pred_y.shape}")
+et = ExtraTreesClassifier(
+    n_estimators=1200,
+    max_depth=None,
+    max_features=0.4,
+    min_samples_leaf=1,
+    bootstrap=False,
+    random_state=42,
+    n_jobs=-1
+)
+
+rf_classifier.fit(X_train, y_train)
+et.fit(X_train, y_train)
+
+proba_rf = rf_classifier.predict_proba(X_test)
+proba_et = et.predict_proba(X_test)
+
+pred_final = np.argmax(proba_rf + proba_et, axis=1)
+
+
+print(f"Shape des prédictions: {pred_final.shape}")
 
 # Sauvegarde des résultats dans le fichier de soumission
-pred_df = pd.DataFrame(pred_y, columns=['change_type'])  # Création du DataFrame avec les prédictions
+pred_df = pd.DataFrame(pred_final, columns=['change_type'])  # Création du DataFrame avec les prédictions
 pred_df.to_csv("rf_sample_submission.csv", index=True, index_label='Id')  # Export en CSV avec index

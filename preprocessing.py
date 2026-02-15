@@ -7,8 +7,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer  
 import pandas as pd
 import xgboost as xgb
-from sklearn.ensemble import RandomForestClassifier
-
 
 # Mapping des classes cibles (change_type) vers des entiers pour la classification
 change_type_map = {'Demolition': 0, 'Road': 1, 'Residential': 2, 'Commercial': 3, 'Industrial': 4, 'Mega Projects': 5}
@@ -42,6 +40,7 @@ preprocessor = ColumnTransformer(
     transformers=[
         ('num', Pipeline([
             ('imputer', SimpleImputer(strategy='median')),  # Remplace NaN par médiane
+            ('scaler', StandardScaler())  # Puis normalise
         ]), numeric_features),
         ('cat', Pipeline([
             ('imputer', SimpleImputer(strategy='most_frequent')),  # Remplace NaN par valeur la plus fréquente
@@ -60,27 +59,3 @@ X_test = preprocessor.transform(test_df[numeric_features + categorical_features]
 # Affichage des dimensions pour vérifier
 print(f"Dimensions entraînement: X={X_train.shape}, y={y_train.shape}")
 print(f"Dimensions test: X={X_test.shape}")
-
-
-# Entraînement du modèle Random Forest
-rf_classifier = RandomForestClassifier(
-    n_estimators=500,
-    max_depth=25,
-    max_features='log2',
-    min_samples_leaf=2,
-    bootstrap=True,
-    oob_score=True,
-    random_state=42,
-    n_jobs=-1
-)
-print("Début de l'entrainement...")
-rf_classifier.fit(X_train, y_train)  # Entraînement du modèle
-print("Entrainement terminé.")
-
-# Prédiction sur les données de test
-pred_y = rf_classifier.predict(X_test)  # Prédictions sous forme d'entiers (0-5)
-print(f"Shape des prédictions: {pred_y.shape}")
-
-# Sauvegarde des résultats dans le fichier de soumission
-pred_df = pd.DataFrame(pred_y, columns=['change_type'])  # Création du DataFrame avec les prédictions
-pred_df.to_csv("rf_sample_submission.csv", index=True, index_label='Id')  # Export en CSV avec index
